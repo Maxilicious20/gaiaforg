@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0f19;
+  --card-bg: #151b2b;
+  --gaia-accent: #4ade80;
+  --void-accent: #a855f7;
+}
+
+body {
+  background-color: var(--background);
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
+}
+
+h1, h2, h3, .rpg-font {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.05em;
+}
+
+/* Scrollbar Style */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
