@@ -17,6 +17,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Sicherstellen, dass der API-Key gesetzt ist (vermeidet schwer zu findende Laufzeitfehler)
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("Missing GOOGLE_API_KEY environment variable");
+    return NextResponse.json({ error: "Missing GOOGLE_API_KEY environment variable." }, { status: 500 });
+  }
+
   // 2. Credits prüfen
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -96,6 +102,8 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("AI Error:", error);
-    return NextResponse.json({ error: "Failed to generate blueprint." }, { status: 500 });
+    // Für Debugging: Gebe die Fehlermeldung mit zurück (hilft beim Beheben).
+    const message = error && typeof error === "object" && "message" in error ? (error as any).message : String(error);
+    return NextResponse.json({ error: "Failed to generate blueprint.", details: message }, { status: 500 });
   }
 }
