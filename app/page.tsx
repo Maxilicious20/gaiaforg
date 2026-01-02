@@ -5,16 +5,15 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession(); // 'update' importiert um Credits live zu aktualisieren
   const [prompt, setPrompt] = useState("");
-  // Neue State-Variable für die Kategorie
   const [category, setCategory] = useState("weapon");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Ladezustand
 
   useEffect(() => {
     const savedPrompt = localStorage.getItem("pendingPrompt");
     if (session && savedPrompt) {
-      // asynchron aufrufen, um setState innerhalb des Effects zu vermeiden
       setTimeout(() => {
         setPrompt(savedPrompt);
         localStorage.removeItem("pendingPrompt");
@@ -22,21 +21,47 @@ export default function Home() {
     }
   }, [session]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     if (!session) {
       localStorage.setItem("pendingPrompt", prompt);
       setShowLoginModal(true);
-    } else {
-      // Zugriff auf Credits
-      if (session.user.credits <= 0) {
-        alert("Not enough credits! Please recharge.");
-        return;
+      return;
+    }
+
+    // Zugriff auf Credits Check (Frontend)
+    if (session.user.credits <= 0) {
+      alert("Not enough credits! You get 6 free credits every month.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Hier rufen wir jetzt das echte Backend auf
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, category }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Something went wrong");
+      } else {
+        // Erfolg! Credits wurden abgezogen.
+        await update(); // Aktualisiert die Session (und damit die Credits Anzeige oben)
+        
+        // Ausgabe der Nachricht (Server Antwort)
+        alert(`SYSTEM MESSAGE:\n${data.message}\n\n(Credits remaining: ${data.credits})`);
       }
-      
-      console.log(`Generating [${category}]: ${prompt}`);
-      alert(`Forge started! \nType: ${category.toUpperCase()} \nPrompt: ${prompt} \n\n(This would cost 1 Credit)`);
+
+    } catch (error) {
+      alert("Failed to connect to GaiaForge Server.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -57,13 +82,19 @@ export default function Home() {
 
       {/* Navbar mit Credits Counter */}
       <nav className="absolute top-0 w-full p-6 flex justify-between items-center z-20">
-        <div className="flex items-center gap-2">
-            <div className="text-xl font-bold tracking-widest text-emerald-500 uppercase">
-            GaiaForge 
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+                <div className="text-xl font-bold tracking-widest text-emerald-500 uppercase">
+                GaiaForge 
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/50 text-emerald-400 border border-emerald-500/30">
+                    BETA
+                </span>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/50 text-emerald-400 border border-emerald-500/30">
-                BETA
-            </span>
+            {/* NEU: Premium Button (Gesperrt) */}
+            <button disabled className="flex items-center gap-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest border border-gray-800 bg-black/50 px-2 py-1 rounded cursor-not-allowed opacity-70 hover:opacity-70">
+                🔒 Premium (Coming Soon)
+            </button>
         </div>
         
         <div>
@@ -73,7 +104,9 @@ export default function Home() {
               <div className="flex items-center gap-2 px-3 py-1 bg-black/40 border border-white/10 rounded-full">
                 <span className="text-yellow-400 text-lg">💎</span>
                 <span className="font-mono font-bold text-emerald-100">
-                    {session.user.credits.toLocaleString()}
+                    {/* Fallback, falls user.credits noch undefined ist beim Laden */}
+                    {/* @ts-ignore */}
+                    {session.user.credits?.toLocaleString() || 0}
                 </span>
               </div>
 
@@ -117,19 +150,26 @@ export default function Home() {
         <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/5 focus-within:ring-emerald-500/50 transition-all">
           
           {/* Header: Category Selection */}
-          <div className="flex items-center border-b border-white/10 bg-white/5 px-4 py-2">
-            <span className="text-xs font-bold text-gray-500 uppercase mr-3 tracking-wider">Mode:</span>
-            <select 
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="bg-transparent text-emerald-400 text-sm font-bold outline-none cursor-pointer hover:text-emerald-300 uppercase tracking-wide"
-            >
-                <option value="weapon" className="bg-black text-gray-300">⚔️ Weapon</option>
-                <option value="mob" className="bg-black text-gray-300">🧟 Entity / Mob</option>
-                <option value="block" className="bg-black text-gray-300">🧊 Block</option>
-                <option value="mechanic" className="bg-black text-gray-300">⚙️ Game Mechanic</option>
-                <option value="ui" className="bg-black text-gray-300">🖥️ Interface (XAML)</option>
-            </select>
+          <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-4 py-2">
+            <div className="flex items-center">
+                <span className="text-xs font-bold text-gray-500 uppercase mr-3 tracking-wider">Mode:</span>
+                <select 
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="bg-transparent text-emerald-400 text-sm font-bold outline-none cursor-pointer hover:text-emerald-300 uppercase tracking-wide"
+                >
+                    <option value="weapon" className="bg-black text-gray-300">⚔️ Weapon</option>
+                    <option value="mob" className="bg-black text-gray-300">🧟 Entity / Mob</option>
+                    <option value="block" className="bg-black text-gray-300">🧊 Block</option>
+                    <option value="mechanic" className="bg-black text-gray-300">⚙️ Game Mechanic</option>
+                    <option value="ui" className="bg-black text-gray-300">🖥️ Interface (XAML)</option>
+                </select>
+            </div>
+          </div>
+
+          {/* NEU: Disclaimer Warning Box */}
+          <div className="bg-yellow-900/20 border-b border-yellow-500/20 px-4 py-2 text-[10px] text-yellow-500 font-mono flex items-center gap-2">
+            ⚠️ NOTICE: Generation for <strong>{category.toUpperCase()}</strong> will be available after Hytale Early Access release. Results may be unstable due to game API changes.
           </div>
 
           <textarea
@@ -147,14 +187,17 @@ export default function Home() {
           
           <div className="flex justify-between items-center px-4 py-3 border-t border-white/10 bg-black/20">
             <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs text-gray-500 font-mono">System Ready</span>
+                <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500' : 'bg-emerald-500'} animate-pulse`}></span>
+                <span className="text-xs text-gray-500 font-mono">
+                    {isLoading ? "Forging..." : "System Ready"}
+                </span>
             </div>
             <button 
               onClick={handleGenerate}
-              className="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold rounded-lg transition transform hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center gap-2"
+              disabled={isLoading}
+              className="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold rounded-lg transition transform hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
             >
-              <span>Generate</span>
+              <span>{isLoading ? "Processing..." : "Generate"}</span>
               <span className="text-xs opacity-70 bg-black/20 px-1.5 py-0.5 rounded">-1 💎</span>
             </button>
           </div>
@@ -178,7 +221,9 @@ export default function Home() {
 
             <h2 className="text-2xl font-bold mb-2 text-white">Login Required</h2>
             <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-              Create an account to save your assets and manage your generation credits.
+              Create an account to save your assets.
+              <br/>
+              <span className="text-emerald-400 font-bold">Bonus: Start with 10 Credits!</span> (6 Credits/Month thereafter)
             </p>
 
             <div className="space-y-3">
@@ -190,7 +235,7 @@ export default function Home() {
                 Sign in with Google
               </button>
               <button 
-                onClick={() => signIn("discord")} // Funktioniert erst wenn Discord Keys in .env stehen
+                onClick={() => signIn("discord")} 
                 className="w-full py-3 bg-[#5865F2] text-white font-bold rounded-lg hover:bg-[#4752C4] transition flex justify-center items-center gap-3"
               >
                 <img src="https://assets-global.website-files.com/6257adef93867e56f84d3092/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" className="w-5 h-5" alt="D" />
