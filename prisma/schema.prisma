@@ -58,3 +58,13 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+model KnowledgeBase {
+  id        String   @id @default(cuid())
+  content   String   // Der Text (z.B. "Ein Schwert braucht JSON...")
+  source    String   // Die Quelle (z.B. "guide.txt")
+  
+  // Das hier ist der magische Vektor-Speicher für die KI
+  embedding Unsupported("vector(768)")? 
+
+  createdAt DateTime @default(now())
+}
