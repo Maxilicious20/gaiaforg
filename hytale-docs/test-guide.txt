@@ -1,0 +1,3 @@
+Hytale Weapon System Rule #1:
+Every sword must have a 'sharpness' value between 1 and 100 in the JSON config.
+Fire swords deal double damage to Tree-Monsters.
