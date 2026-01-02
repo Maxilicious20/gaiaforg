@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
     // E. Die Antwort generieren
     // Versuche zuerst das gewünschte Modell, bei 404 (nicht verfügbar) nutze Fallbacks.
-    const preferredModels = ["gemini-1.5-pro", "gemini-1.5", "text-bison-001", "models/text-bison-001", "chat-bison-001"];
+    const preferredModels = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5", "text-bison-001", "models/text-bison-001", "chat-bison-001"];
     let answer = "";
     let lastError: any = null;
 
