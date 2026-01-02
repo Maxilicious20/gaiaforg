@@ -1,0 +1,33 @@
+TITLE: Scripting Syntax & JSON Schemas
+SOURCE: Deduced from Hytale Blog Screenshots
+TYPE: Coding Standards
+
+1. Naming Conventions
+- IDs: Must be snake_case and namespaced. (e.g., "gaia_mods:obsidian_sword")
+- Files: Should match the ID (e.g., "obsidian_sword.json")
+
+2. JSON Structure for Items (Blueprint)
+Items are typically defined with these fields:
+- "id": The unique identifier.
+- "model": Path to the .hym (Hytale Model) file.
+- "name": Display name.
+- "behavior": Links to script files.
+
+Example Structure (Mockup):
+{
+  "id": "my_mod:fire_blade",
+  "name": "Blade of Embers",
+  "tier": "legendary",
+  "model": "models/weapons/fire_blade.hym",
+  "components": {
+    "damage": 50,
+    "damage_type": "fire",
+    "durability": 1200
+  }
+}
+
+3. Scripting Logic (AI Behaviors)
+Mobs use "Behavior Trees" or "State Machines".
+- Idle State: Look around, walk randomly.
+- Aggro State: Detect player within radius X, switch to Chase.
+- Attack State: When range < 2, play animation "slash".

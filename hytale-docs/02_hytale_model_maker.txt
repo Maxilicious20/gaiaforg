@@ -1,0 +1,25 @@
+TITLE: Hytale Model Maker (HMM) & Visual Style
+SOURCE: Hytale Model Maker Trailer
+TYPE: Art Asset Guide
+
+1. Cuboids and Planes
+- Hytale models are made of "Cuboids" (Boxes) and "Planes" (2D flat surfaces).
+- Complex meshes (like spheres or high-poly curves) are NOT supported. Everything must be blocky to fit the aesthetic.
+- Standard texture resolution is 32x or 64x grids per block face.
+
+2. The Hierarchy (Parent-Child)
+- Models rely on a strict hierarchy (Bone structure).
+- Example for a Human:
+  - Body (Root)
+    - Head (Child of Body)
+    - Arm_Left (Child of Body)
+      - Hand_Left (Child of Arm)
+        - ITEM_HOLDER (Attachment Point)
+
+3. Attachments & Points
+- To allow a character to hold a weapon, the model needs a defined "Attachment Point" (usually named 'main_hand' or similar).
+- Particles (like fire on a sword) also spawn from these specific coordinates defined in the model.
+
+4. Animation Style
+- Animations are keyframe-based interpolation.
+- Do not use "motion capture" style fluidity; keep animations snappy and expressive (RPG style).

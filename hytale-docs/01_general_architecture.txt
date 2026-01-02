@@ -1,0 +1,20 @@
+TITLE: Hytale Engine Architecture & Core Concepts
+SOURCE: Hytale Official Blog & Tech Trailers (Pre-Release)
+TYPE: System Documentation
+
+1. Client-Server Architecture
+Hytale uses a strict Client-Server model.
+- The Server is authoritative (it decides what happens).
+- The Client is for prediction and rendering.
+- When creating mods, logic usually resides on the server to prevent cheating, while visuals (models, particles) are handled by the client.
+
+2. Entity Component System (ECS)
+Hytale does NOT use standard OOP inheritance (like "Dog extends Animal").
+It uses an Entity Component System (ECS).
+- Entities are just empty containers (IDs).
+- You add "Components" to them to give them traits.
+- Example: To make a rock move, you don't make a "MovingRock" class; you add a "PhysicsComponent" and a "VelocityComponent" to a rock entity.
+
+3. Content Loading & Hot Reloading
+- Hytale supports "Hot Reloading". Modders can change a texture or a JSON file, and it updates in-game immediately without restarting.
+- Assets are defined in JSON, behavior is defined in scripts.
