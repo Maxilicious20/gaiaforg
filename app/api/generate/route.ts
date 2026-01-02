@@ -107,15 +107,10 @@ export async function POST(req: Request) {
     }
 
     if (!answer) {
-      // Liste Modelle (nur zu Debugging in non-production)
-      try {
-        const modelsList = await genAI.listModels();
-        console.error("Available models:", modelsList);
-        if (process.env.NODE_ENV !== "production") {
-          return NextResponse.json({ error: "Failed to generate blueprint.", details: (lastError && lastError.message) || String(lastError), availableModels: modelsList }, { status: 500 });
-        }
-      } catch (listErr) {
-        console.error("Failed to list models:", listErr);
+      // Konnte kein Modell eine Antwort liefern. Gebe Fehlerdetails in Entwicklung zurück.
+      console.error("No model produced a response. Last error:", lastError);
+      if (process.env.NODE_ENV !== "production") {
+        return NextResponse.json({ error: "Failed to generate blueprint.", details: (lastError && (lastError as any).message) || String(lastError) }, { status: 500 });
       }
       throw lastError || new Error("No model produced a response");
     }
