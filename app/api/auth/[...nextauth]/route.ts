@@ -1,21 +1,32 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import DiscordProvider from "next-auth/providers/discord";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 const handler = NextAuth({
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
     DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID || "",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+        clientId: process.env.DISCORD_CLIENT_ID!,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET!,
     }),
   ],
-  // Das Design für die Login-Seite (falls etwas schief geht)
-  theme: {
-    colorScheme: "dark",
+  callbacks: {
+    async session({ session, user }) {
+      // Hier schieben wir die Credits von der Datenbank in die Session
+      if (session.user) {
+        // @ts-expect-error: next-auth session user extended at runtime with `credits`
+        session.user.credits = user.credits;
+      }
+      return session;
+    },
   },
 });
 
