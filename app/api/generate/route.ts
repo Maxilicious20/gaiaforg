@@ -82,73 +82,52 @@ export async function POST(req: Request) {
       ${prompt}
     `;
 
-    // E. Die Antwort generieren
-    // Versuche zuerst das gewünschte Modell, bei 404 (nicht verfügbar) nutze Fallbacks.
-    const preferredModels = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5", "text-bison-001", "models/text-bison-001", "chat-bison-001"];
+    // E. Die Antwort generieren — Verwende primär Hugging Face Router API
     let answer = "";
-    let lastError: any = null;
 
-    for (const m of preferredModels) {
+    if (process.env.HUGGINGFACE_API_KEY) {
       try {
-        const candidate = genAI.getGenerativeModel({ model: m });
-        const res = await candidate.generateContent(tutorPrompt);
-        answer = res.response?.text ? res.response.text() : String(res);
-        break;
-      } catch (err) {
-        lastError = err;
-        // Wenn 404: Modell nicht verfügbar für diese API-Version, probiere nächsten
-        const status = (err && typeof err === "object" && "status" in err) ? (err as any).status : null;
-        if (status !== 404) {
-          // Nicht-404 Fehler — breche ab und wir geben den Fehler weiter
-          throw err;
-        }
-        console.warn(`Model ${m} not available, trying next fallback.`);
-      }
-    }
+        const hfModel = process.env.HUGGINGFACE_MODEL || "gpt2";
+        const hfUrl = `https://router.huggingface.co/models/${hfModel}`;
+        const hfRes = await fetch(hfUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ inputs: tutorPrompt, options: { wait_for_model: true } }),
+        });
 
-    if (!answer) {
-      console.error("No model produced a response. Last error:", lastError);
-
-      // Versuch: Hugging Face Inference API als Fallback (falls API-Key gesetzt)
-      if (process.env.HUGGINGFACE_API_KEY) {
-        try {
-          const hfModel = process.env.HUGGINGFACE_MODEL || "gpt2";
-          const hfRes = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ inputs: tutorPrompt, options: { wait_for_model: true } }),
-          });
-
-          const hfJson = await hfRes.json();
-          if (hfRes.ok) {
-            if (Array.isArray(hfJson) && hfJson.length > 0 && hfJson[0].generated_text) {
-              answer = hfJson[0].generated_text;
-            } else if (hfJson.generated_text) {
-              answer = hfJson.generated_text;
-            } else if (typeof hfJson === "string") {
-              answer = hfJson;
-            } else {
-              answer = JSON.stringify(hfJson);
-            }
-          } else {
-            console.error("Hugging Face error response:", hfRes.status, hfJson);
-            lastError = lastError || new Error(`HuggingFace ${hfRes.status}: ${JSON.stringify(hfJson)}`);
+        const hfJson = await hfRes.json();
+        if (!hfRes.ok) {
+          console.error("Hugging Face error response:", hfRes.status, hfJson);
+          const msg = (hfJson && (hfJson as any).error) ? (hfJson as any).error : JSON.stringify(hfJson);
+          if (process.env.NODE_ENV !== "production") {
+            return NextResponse.json({ error: "Failed to generate blueprint.", details: `HuggingFace ${hfRes.status}: ${msg}` }, { status: 500 });
           }
-        } catch (hfErr) {
-          console.error("HuggingFace call failed:", hfErr);
-          lastError = lastError || hfErr;
+          throw new Error(`HuggingFace ${hfRes.status}: ${msg}`);
         }
-      }
 
-      if (!answer) {
-        if (process.env.NODE_ENV !== "production") {
-          return NextResponse.json({ error: "Failed to generate blueprint.", details: (lastError && (lastError as any).message) || String(lastError) }, { status: 500 });
+        if (Array.isArray(hfJson) && hfJson.length > 0 && hfJson[0].generated_text) {
+          answer = hfJson[0].generated_text;
+        } else if ((hfJson as any).generated_text) {
+          answer = (hfJson as any).generated_text;
+        } else if (typeof hfJson === "string") {
+          answer = hfJson;
+        } else {
+          answer = JSON.stringify(hfJson);
         }
-        throw lastError || new Error("No model produced a response");
+      } catch (hfErr) {
+        console.error("HuggingFace call failed:", hfErr);
+        if (process.env.NODE_ENV !== "production") {
+          return NextResponse.json({ error: "Failed to generate blueprint.", details: String(hfErr) }, { status: 500 });
+        }
+        throw hfErr;
       }
+    } else {
+      // Kein Hugging Face Key konfiguriert — klare Fehlermeldung
+      console.error("No HUGGINGFACE_API_KEY configured, generation unavailable.");
+      return NextResponse.json({ error: "No generation provider configured.", details: "Set HUGGINGFACE_API_KEY in environment." }, { status: 500 });
     }
 
     // --- RAG LOGIK ENDE ---
