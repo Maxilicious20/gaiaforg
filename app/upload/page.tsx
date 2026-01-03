@@ -26,10 +26,6 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-black">
-        {/* Background Fix */}
-        <div className="absolute inset-0 z-0">
-             <Image src="/hero-bg.jpg" alt="bg" fill className="object-cover opacity-20" />
-        </div>
 
         <form onSubmit={handleSubmit} className="z-10 bg-[#151b2b] border border-emerald-500/30 p-8 rounded-xl w-full max-w-lg shadow-2xl backdrop-blur-md">
             <h1 className="text-3xl font-bold text-white mb-6">Upload Mod</h1>
