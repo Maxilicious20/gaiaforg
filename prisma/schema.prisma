@@ -1,31 +1,92 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // Connection Pooling (für Vercel/Neon wichtig)
-  directUrl = env("POSTGRES_URL_NON_POOLING") // Direkte Verbindung für Migrationen
+// User bleibt, aber ohne Credits
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Relationen
+  mods          Mod[]     @relation("UserMods")
+  comments      Comment[]
+  votes         Vote[]
 }
 
-// --- NextAuth Modelle (für Google & Discord Login) ---
+model Mod {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  downloadUrl String   // Link zum Download (z.B. Google Drive Link oder Discord Upload)
+  imageUrl    String?  // Ein Bild für die Mod
+  
+  category    String   // z.B. "Magic", "Tech", "Biomes"
+  
+  published   Boolean  @default(false) // Standard: Nicht öffentlich (Wartet auf dich)
+  createdAt   DateTime @default(now())
+  
+  authorId    String
+  author      User     @relation("UserMods", fields: [authorId], references: [id])
 
+  comments    Comment[]
+  votes       Vote[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  modId     String
+  mod       Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+}
+
+enum VoteType {
+  LIKE
+  DISLIKE
+}
+
+model Vote {
+  id     String   @id @default(cuid())
+  type   VoteType
+  
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  
+  modId  String
+  mod    Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, modId]) // Ein User kann pro Mod nur einmal voten
+}
+
+// Standard NextAuth Tabellen (nötig für Login)
 model Account {
   id                 String  @id @default(cuid())
   userId             String
   type               String
   provider           String
   providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String?  @db.Text
+  id_token           String? @db.Text
   session_state      String?
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([provider, providerAccountId])
 }
 
@@ -37,34 +98,9 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  
-  // Dein Hytale Feature: User starten mit 10 Credits
-  credits       Int       @default(10) 
-
-  accounts      Account[]
-  sessions      Session[]
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-
   @@unique([identifier, token])
-}
-model KnowledgeBase {
-  id        String   @id @default(cuid())
-  content   String   // Der Text (z.B. "Ein Schwert braucht JSON...")
-  source    String   // Die Quelle (z.B. "guide.txt")
-  
-  // Das hier ist der magische Vektor-Speicher für die KI
-  embedding Unsupported("vector(768)")? 
-
-  createdAt DateTime @default(now())
 }
