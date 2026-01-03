@@ -27,7 +27,18 @@ export default function Home() {
   return (
     <main className="min-h-screen relative bg-[#0b0f19] text-gray-200 font-sans overflow-x-hidden">
       
-        {/* Background is provided by the global layout */}
+      {/* 1. DYNAMISCHER HINTERGRUND */}
+      <div className="fixed inset-0 z-0">
+         {/* Wir nutzen standardmäßig hero-bg, außer wir bauen einen komplexen Fetch für Settings */}
+         <Image 
+            src="/hero-bg.jpg" 
+            alt="Background" 
+            fill 
+            className="object-cover opacity-40"
+            priority
+         />
+         <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/80 to-transparent" />
+      </div>
 
       {/* 2. NAVBAR (Verbessert) */}
       <nav className="border-b border-white/10 bg-[#151b2b]/80 backdrop-blur-md p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
