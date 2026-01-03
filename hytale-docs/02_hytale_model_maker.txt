@@ -22,4 +22,4 @@ TYPE: Art Asset Guide
 
 4. Animation Style
 - Animations are keyframe-based interpolation.
-- Do not use "motion capture" style fluidity; keep animations snappy and expressive (RPG style).
+- Do not use "motion capture" style fluidity; keep animations snappy and expressive (RPG style). 
